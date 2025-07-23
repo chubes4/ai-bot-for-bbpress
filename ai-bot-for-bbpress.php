@@ -65,7 +65,7 @@ $container = new AiBot_Service_Container();
 
 // Register AI HTTP Client (auto-reads provider configuration from WordPress options)
 $container->register( 'api.ai_http_client', function( $c ) {
-    return new AI_HTTP_Client();
+    return new AI_HTTP_Client(['plugin_context' => 'ai-bot-for-bbpress']);
 } );
 
 $container->register( 'context.database_agent', function( $c ) {
