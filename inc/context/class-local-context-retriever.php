@@ -2,7 +2,6 @@
 
 namespace AiBot\Context;
 
-use AiBot\API\ChatGPT_API;
 use AiBot\Context\Database_Agent;
 
 /**
@@ -11,13 +10,6 @@ use AiBot\Context\Database_Agent;
  * Handles intelligent keyword extraction and local database content retrieval.
  */
 class Local_Context_Retriever {
-
-    /**
-     * ChatGPT API instance
-     *
-     * @var ChatGPT_API
-     */
-    private $chatgpt_api;
 
     /**
      * Database Agent instance
@@ -29,11 +21,9 @@ class Local_Context_Retriever {
     /**
      * Constructor
      *
-     * @param ChatGPT_API $chatgpt_api The ChatGPT API instance.
      * @param Database_Agent $database_agent The database agent instance.
      */
-    public function __construct( ChatGPT_API $chatgpt_api, Database_Agent $database_agent ) {
-        $this->chatgpt_api    = $chatgpt_api;
+    public function __construct( Database_Agent $database_agent ) {
         $this->database_agent = $database_agent;
     }
 

@@ -55,7 +55,7 @@ class AI_HTTP_Unified_Model_Fetcher {
                 return self::fetch_openrouter_models($provider_config);
             
             default:
-                throw new Exception("Unsupported provider for model fetching: {$provider_name}");
+                throw new Exception("Unsupported provider for model fetching: " . esc_html($provider_name));
         }
     }
 
@@ -82,15 +82,25 @@ class AI_HTTP_Unified_Model_Fetcher {
     }
 
     /**
-     * Fetch Anthropic models
-     * Anthropic doesn't have a models API endpoint - will throw exception
+     * Fetch Anthropic models via API
+     * Returns raw API response - NO filtering, NO fallbacks
      *
      * @param array $config Anthropic configuration
-     * @return array Never returns - always throws
-     * @throws Exception Always throws since Anthropic has no models API
+     * @return array Raw API response
+     * @throws Exception If API key missing or API fails
      */
     private static function fetch_anthropic_models($config) {
-        throw new Exception('Anthropic does not provide a models API endpoint');
+        if (empty($config['api_key'])) {
+            throw new Exception('Anthropic API key is required to fetch models');
+        }
+
+        // Use simple Anthropic provider to get raw models
+        if (!class_exists('AI_HTTP_Anthropic_Provider')) {
+            require_once dirname(__DIR__) . '/Providers/anthropic.php';
+        }
+        
+        $provider = new AI_HTTP_Anthropic_Provider($config);
+        return $provider->get_raw_models();
     }
 
     /**
@@ -222,8 +232,15 @@ class AI_HTTP_Unified_Model_Fetcher {
                 break;
                 
             case 'anthropic':
-                // Anthropic doesn't have models API - should not reach here
-                // Return empty array
+                // Anthropic returns: { "data": [{"id": "claude-3-5-sonnet-20241022", "type": "model", ...}, ...] }
+                $data = isset($raw_models['data']) ? $raw_models['data'] : $raw_models;
+                if (is_array($data)) {
+                    foreach ($data as $model) {
+                        if (isset($model['id'])) {
+                            $models[$model['id']] = $model['id'];
+                        }
+                    }
+                }
                 break;
                 
             default:

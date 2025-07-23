@@ -44,13 +44,17 @@ class AI_HTTP_Client {
             $config = $options_manager->get_client_config();
         }
         
-        // Set default configuration
+        // Set default configuration (NO default provider - must be explicitly configured)
         $this->config = wp_parse_args($config, array(
-            'default_provider' => 'openai',
             'timeout' => 30,
             'retry_attempts' => 3,
             'logging_enabled' => false
         ));
+        
+        // Validate that we have a provider configured
+        if (empty($this->config['default_provider'])) {
+            throw new Exception('AI HTTP Client: No provider configured. Please configure a provider in WordPress admin or pass explicit config.');
+        }
 
         // Initialize unified normalizers
         $this->request_normalizer = new AI_HTTP_Unified_Request_Normalizer();
@@ -126,13 +130,13 @@ class AI_HTTP_Client {
             return $provider->send_raw_streaming_request($streaming_request, function($chunk) use ($provider_name) {
                 $processed = $this->streaming_normalizer->process_streaming_chunk($chunk, $provider_name);
                 if ($processed && isset($processed['content'])) {
-                    echo $processed['content'];
+                    echo esc_html($processed['content']);
                     flush();
                 }
             });
             
         } catch (Exception $e) {
-            throw new Exception("Streaming failed for {$provider_name}: " . $e->getMessage());
+            throw new Exception("Streaming failed for " . esc_html($provider_name) . ": " . esc_html($e->getMessage()));
         }
     }
 
@@ -171,7 +175,7 @@ class AI_HTTP_Client {
             }
             
         } catch (Exception $e) {
-            throw new Exception("Tool continuation failed for {$provider_name}: " . $e->getMessage());
+            throw new Exception("Tool continuation failed for " . esc_html($provider_name) . ": " . esc_html($e->getMessage()));
         }
     }
 
@@ -267,7 +271,7 @@ class AI_HTTP_Client {
                 break;
             
             default:
-                throw new Exception("Provider '{$provider_name}' not supported in unified architecture");
+                throw new Exception("Provider '" . esc_html($provider_name) . "' not supported in unified architecture");
         }
         
         return $this->providers[$provider_name];

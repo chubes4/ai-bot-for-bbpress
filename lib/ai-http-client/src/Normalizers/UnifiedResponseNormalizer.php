@@ -46,7 +46,7 @@ class AI_HTTP_Unified_Response_Normalizer {
                 return $this->normalize_from_openrouter($provider_response);
             
             default:
-                throw new Exception("Unsupported provider: {$provider_name}");
+                throw new Exception("Unsupported provider: " . esc_html($provider_name));
         }
     }
 
@@ -58,7 +58,7 @@ class AI_HTTP_Unified_Response_Normalizer {
      */
     private function normalize_from_openai($openai_response) {
         // Handle OpenAI Responses API format (primary)
-        if (isset($openai_response['response'])) {
+        if (isset($openai_response['output'])) {
             return $this->normalize_openai_responses_api($openai_response);
         }
         
@@ -215,7 +215,8 @@ class AI_HTTP_Unified_Response_Normalizer {
      * @return array Standard format
      */
     private function normalize_openai_responses_api($response) {
-        $response_data = $response['response'];
+        // Response data is the root level response from OpenAI
+        $response_data = $response;
         
         // Extract response ID for continuation
         $response_id = isset($response_data['id']) ? $response_data['id'] : null;
@@ -229,32 +230,36 @@ class AI_HTTP_Unified_Response_Normalizer {
         
         if (isset($response_data['output']) && is_array($response_data['output'])) {
             foreach ($response_data['output'] as $output_item) {
-                if (isset($output_item['type'])) {
-                    switch ($output_item['type']) {
-                        case 'content':
-                            $content .= isset($output_item['text']) ? $output_item['text'] : '';
-                            break;
-                        case 'function_call':
-                            if (isset($output_item['status']) && $output_item['status'] === 'completed') {
-                                $tool_calls[] = array(
-                                    'id' => $output_item['id'] ?? uniqid('tool_'),
-                                    'type' => 'function',
-                                    'function' => array(
-                                        'name' => $output_item['function_call']['name'],
-                                        'arguments' => wp_json_encode($output_item['function_call']['arguments'] ?? array())
-                                    )
-                                );
+                // Handle message-type output items
+                if (isset($output_item['type']) && $output_item['type'] === 'message') {
+                    if (isset($output_item['content']) && is_array($output_item['content'])) {
+                        foreach ($output_item['content'] as $content_item) {
+                            if (isset($content_item['type']) && $content_item['type'] === 'output_text') {
+                                $content .= isset($content_item['text']) ? $content_item['text'] : '';
                             }
-                            break;
+                        }
+                    }
+                }
+                // Handle function calls (tool calls)
+                elseif (isset($output_item['type']) && $output_item['type'] === 'function_call') {
+                    if (isset($output_item['status']) && $output_item['status'] === 'completed') {
+                        $tool_calls[] = array(
+                            'id' => $output_item['id'] ?? uniqid('tool_'),
+                            'type' => 'function',
+                            'function' => array(
+                                'name' => $output_item['function_call']['name'],
+                                'arguments' => wp_json_encode($output_item['function_call']['arguments'] ?? array())
+                            )
+                        );
                     }
                 }
             }
         }
 
-        // Extract usage
+        // Extract usage (OpenAI Responses API uses input_tokens and output_tokens)
         $usage = array(
-            'prompt_tokens' => isset($response_data['usage']['prompt_tokens']) ? $response_data['usage']['prompt_tokens'] : 0,
-            'completion_tokens' => isset($response_data['usage']['completion_tokens']) ? $response_data['usage']['completion_tokens'] : 0,
+            'prompt_tokens' => isset($response_data['usage']['input_tokens']) ? $response_data['usage']['input_tokens'] : 0,
+            'completion_tokens' => isset($response_data['usage']['output_tokens']) ? $response_data['usage']['output_tokens'] : 0,
             'total_tokens' => isset($response_data['usage']['total_tokens']) ? $response_data['usage']['total_tokens'] : 0
         );
 

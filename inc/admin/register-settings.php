@@ -19,7 +19,7 @@ function ai_bot_register_all_settings() {
     $page_slug      = 'ai-bot-for-bbpress-settings';
 
     // Register settings (Each option needs to be registered)
-    register_setting( $settings_group, 'ai_bot_api_key', 'sanitize_text_field' );
+    // Note: AI HTTP Client handles its own settings (ai_http_client_providers, ai_http_client_selected_provider)
     register_setting( $settings_group, 'ai_bot_user_id', 'absint' );
     register_setting( $settings_group, 'ai_bot_system_prompt', 'wp_kses_post' );
     register_setting( $settings_group, 'ai_bot_custom_prompt', 'wp_kses_post' );
@@ -34,7 +34,7 @@ function ai_bot_register_all_settings() {
     // API Settings Section
     add_settings_section(
         'ai_bot_api_settings_section', // ID
-        __( 'API Configuration', 'ai-bot-for-bbpress' ), // Title
+        __( 'AI Provider & Bot Configuration', 'ai-bot-for-bbpress' ), // Title
         'ai_bot_api_settings_section_callback', // Callback
         $page_slug // Page
     );
@@ -56,11 +56,11 @@ function ai_bot_register_all_settings() {
     );
 
     // Add Fields
-    // API Key Field
+    // AI Provider Configuration Field (using AI HTTP Client components)
     add_settings_field(
-        'ai_bot_api_key', // ID
-        __( 'OpenAI API Key', 'ai-bot-for-bbpress' ), // Title
-        'ai_bot_api_key_callback', // Callback
+        'ai_bot_provider_config', // ID
+        __( 'AI Provider Configuration', 'ai-bot-for-bbpress' ), // Title
+        'ai_bot_provider_config_callback', // Callback
         $page_slug, // Page
         'ai_bot_api_settings_section' // Section
     );
@@ -150,7 +150,7 @@ function ai_bot_register_all_settings() {
 
 // Section Callbacks
 function ai_bot_api_settings_section_callback() {
-    echo '<p>' . esc_html__( 'Configure API access and the bot user.', 'ai-bot-for-bbpress' ) . '</p>';
+    echo '<p>' . esc_html__( 'Choose your AI provider (OpenAI, Anthropic, Gemini, Grok, or OpenRouter) and configure the bot user.', 'ai-bot-for-bbpress' ) . '</p>';
 }
 
 function ai_bot_behavior_settings_section_callback() {
@@ -162,10 +162,18 @@ function ai_bot_context_settings_section_callback() {
 }
 
 // Field Callbacks
-function ai_bot_api_key_callback() {
-    $api_key = get_option( 'ai_bot_api_key' );
-    echo '<input type="password" name="ai_bot_api_key" value="' . esc_attr( $api_key ) . '" class="regular-text" />';
-    echo '<p class="description">' . esc_html__( 'Enter your OpenAI API key.', 'ai-bot-for-bbpress' ) . '</p>';
+function ai_bot_provider_config_callback() {
+    // Render AI HTTP Client core components only: provider selector, API key input, model selector
+    echo wp_kses_post( AI_HTTP_ProviderManager_Component::render([
+        'title' => false, // No title since we already have one in the field
+        'components' => [
+            'core' => ['provider_selector', 'api_key_input', 'model_selector'],
+            'extended' => [] // No extended components - we use our own temperature
+        ],
+        'show_test_connection' => true,
+        'wrapper_class' => 'ai-http-provider-manager ai-bot-inline-config'
+    ]) );
+    echo '<p class="description">' . esc_html__( 'Select your AI provider, enter your API key, and choose a model.', 'ai-bot-for-bbpress' ) . '</p>';
 }
 
 function ai_bot_user_id_callback() {

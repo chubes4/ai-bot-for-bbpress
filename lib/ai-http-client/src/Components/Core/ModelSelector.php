@@ -167,6 +167,11 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
             $options_manager = new AI_HTTP_Options_Manager();
             $provider_config = $options_manager->get_provider_settings($provider);
             
+            // Check if provider is configured (has API key) before attempting to fetch models
+            if (empty($provider_config['api_key'])) {
+                return '<option value="">Enter API key to load models</option>';
+            }
+            
             // Use unified model fetcher - now returns normalized key-value format
             $models = AI_HTTP_Unified_Model_Fetcher::fetch_models($provider, $provider_config);
             
@@ -187,6 +192,10 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
             return $html;
             
         } catch (Exception $e) {
+            // Check if error is specifically about missing API key
+            if (strpos($e->getMessage(), 'API key') !== false || strpos($e->getMessage(), 'required') !== false) {
+                return '<option value="">Enter API key to load models</option>';
+            }
             return '<option value="">Error loading models</option>';
         }
     }
@@ -210,6 +219,12 @@ class AI_HTTP_Core_ModelSelector implements AI_HTTP_Component_Interface {
             // Get provider settings from WordPress options
             $options_manager = new AI_HTTP_Options_Manager();
             $provider_config = $options_manager->get_provider_settings($provider);
+            
+            // Check if provider is configured (has API key) before attempting to fetch models
+            if (empty($provider_config['api_key'])) {
+                wp_send_json_error('Enter API key to load models');
+                return;
+            }
             
             // Use unified model fetcher
             $models = AI_HTTP_Unified_Model_Fetcher::fetch_models($provider, $provider_config);

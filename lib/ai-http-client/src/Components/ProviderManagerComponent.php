@@ -87,12 +87,12 @@ class AI_HTTP_ProviderManager_Component {
                         : array();
                     
                     try {
-                        echo AI_HTTP_Component_Registry::render_component(
-                            $component_name,
-                            $unique_id,
+                        echo wp_kses_post(AI_HTTP_Component_Registry::render_component(
+                            esc_html($component_name),
+                            esc_attr($unique_id),
                             $component_config,
                             $current_values
-                        );
+                        ));
                     } catch (Exception $e) {
                         echo '<!-- Error rendering component ' . esc_html($component_name) . ': ' . esc_html($e->getMessage()) . ' -->';
                     }
@@ -105,12 +105,12 @@ class AI_HTTP_ProviderManager_Component {
                         : array();
                     
                     try {
-                        echo AI_HTTP_Component_Registry::render_component(
-                            $component_name,
-                            $unique_id,
+                        echo wp_kses_post(AI_HTTP_Component_Registry::render_component(
+                            esc_html($component_name),
+                            esc_attr($unique_id),
                             $component_config,
                             $current_values
-                        );
+                        ));
                     } catch (Exception $e) {
                         echo '<!-- Error rendering component ' . esc_html($component_name) . ': ' . esc_html($e->getMessage()) . ' -->';
                     }
@@ -124,12 +124,12 @@ class AI_HTTP_ProviderManager_Component {
                         : array();
                     
                     try {
-                        echo AI_HTTP_Component_Registry::render_component(
-                            $component_name,
-                            $unique_id,
+                        echo wp_kses_post(AI_HTTP_Component_Registry::render_component(
+                            esc_html($component_name),
+                            esc_attr($unique_id),
                             $component_config,
                             $current_values
-                        );
+                        ));
                     } catch (Exception $e) {
                         echo '<!-- Error rendering custom component ' . esc_html($component_name) . ': ' . esc_html($e->getMessage()) . ' -->';
                     }
@@ -154,12 +154,12 @@ class AI_HTTP_ProviderManager_Component {
                     <?php
                     // Render TestConnection component
                     try {
-                        echo AI_HTTP_Component_Registry::render_component(
+                        echo wp_kses_post(AI_HTTP_Component_Registry::render_component(
                             'test_connection',
-                            $unique_id,
+                            esc_attr($unique_id),
                             [],
                             $current_values
-                        );
+                        ));
                     } catch (Exception $e) {
                         echo '<!-- Error rendering test connection component: ' . esc_html($e->getMessage()) . ' -->';
                     }
@@ -169,7 +169,7 @@ class AI_HTTP_ProviderManager_Component {
         </div>
 
         <script>
-        <?php echo $this->render_javascript($unique_id); ?>
+        <?php $this->output_javascript(esc_js($unique_id)); ?>
         </script>
 
         
@@ -257,19 +257,18 @@ class AI_HTTP_ProviderManager_Component {
     }
 
     /**
-     * Render minimal JavaScript for functionality
+     * Output JavaScript directly (for WordPress plugin check compliance)
      */
-    private function render_javascript($unique_id) {
-        return "
+    private function output_javascript($unique_id) {
+        ?>
         // Provider change handler - just refresh models, no auto-save
-        const providerSelect = document.getElementById('{$unique_id}_provider');
+        const providerSelect = document.getElementById('<?php echo esc_js($unique_id); ?>_provider');
         if (providerSelect) {
             providerSelect.addEventListener('change', function() {
-                aiHttpProviderChanged('$unique_id', this.value);
+                aiHttpProviderChanged('<?php echo esc_js($unique_id); ?>', this.value);
             });
         }
-
-        ";
+        <?php
     }
 
     /**
@@ -373,11 +372,13 @@ class AI_HTTP_ProviderManager_Component {
                         modelSelect.appendChild(option);
                     });
                 } else {
-                    modelSelect.innerHTML = '<option value="">Error loading models</option>';
+                    // Show the specific error message from the server
+                    const errorMessage = data.data || 'Error loading models';
+                    modelSelect.innerHTML = '<option value="">' + errorMessage + '</option>';
                 }
             }).catch(error => {
                 console.error('AI HTTP Client: Model fetch failed', error);
-                modelSelect.innerHTML = '<option value="">Error loading models</option>';
+                modelSelect.innerHTML = '<option value="">Connection error</option>';
             });
         }
 
@@ -501,7 +502,7 @@ function ai_http_render_global_js() {
         const formData = new FormData();
         
         formData.append('action', 'ai_http_save_settings');
-        formData.append('nonce', '<?php echo wp_create_nonce('ai_http_nonce'); ?>');
+        formData.append('nonce', '<?php echo esc_js(wp_create_nonce('ai_http_nonce')); ?>');
         
         component.querySelectorAll('input, select, textarea').forEach(function(input) {
             formData.append(input.name, input.value);
@@ -532,7 +533,7 @@ function ai_http_render_global_js() {
         fetch(ajaxurl, {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'action=ai_http_get_models&provider=' + provider + '&nonce=<?php echo wp_create_nonce('ai_http_nonce'); ?>'
+            body: 'action=ai_http_get_models&provider=' + provider + '&nonce=<?php echo esc_js(wp_create_nonce('ai_http_nonce')); ?>'
         }).then(response => response.json()).then(data => {
             if (data.success) {
                 modelSelect.innerHTML = '';
@@ -555,7 +556,7 @@ function ai_http_render_global_js() {
         fetch(ajaxurl, {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'action=ai_http_test_connection&provider=' + provider + '&nonce=<?php echo wp_create_nonce('ai_http_nonce'); ?>'
+            body: 'action=ai_http_test_connection&provider=' + provider + '&nonce=<?php echo esc_js(wp_create_nonce('ai_http_nonce')); ?>'
         }).then(response => response.json()).then(data => {
             resultSpan.textContent = data.success ? '✓ Connected' : '✗ ' + data.message;
             resultSpan.style.color = data.success ? '#00a32a' : '#d63638';

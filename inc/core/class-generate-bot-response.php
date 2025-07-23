@@ -2,7 +2,6 @@
 
 namespace AiBot\Core;
 
-use AiBot\API\ChatGPT_API;
 use AiBot\Context\Content_Interaction_Service;
 use AiBot\Core\System_Prompt_Builder;
 use AiBot\Core\AiBot_Service_Container;
@@ -17,9 +16,9 @@ use AiBot\Core\AiBot;
 class Generate_Bot_Response {
 
     /**
-     * @var ChatGPT_API
+     * @var \AI_HTTP_Client
      */
-    private $chatgpt_api;
+    private $ai_http_client;
 
     /**
      * @var Content_Interaction_Service
@@ -39,18 +38,18 @@ class Generate_Bot_Response {
     /**
      * Constructor
      *
-     * @param ChatGPT_API $chatgpt_api The ChatGPT API instance.
+     * @param \AI_HTTP_Client $ai_http_client The AI HTTP Client instance.
      * @param Content_Interaction_Service $content_interaction_service The content interaction service instance.
      * @param System_Prompt_Builder $system_prompt_builder The system prompt builder instance.
      * @param AiBot_Service_Container $container The service container instance.
      */
     public function __construct(
-        ChatGPT_API $chatgpt_api,
+        \AI_HTTP_Client $ai_http_client,
         Content_Interaction_Service $content_interaction_service,
         System_Prompt_Builder $system_prompt_builder,
         AiBot_Service_Container $container
     ) {
-        $this->chatgpt_api = $chatgpt_api;
+        $this->ai_http_client = $ai_http_client;
         $this->content_interaction_service = $content_interaction_service;
         $this->system_prompt_builder = $system_prompt_builder;
         $this->container = $container;
@@ -122,10 +121,7 @@ class Generate_Bot_Response {
      * Generate AI response using centralized prompt building and context retrieval
      */
     private function generate_ai_response( $bot_username, $post_content, $topic_id, $forum_id, $post_id, $triggering_username_slug ) {
-        // Get configuration
-        $custom_prompt = get_option( 'ai_bot_custom_prompt' );
-        $temperature = get_option( 'ai_bot_temperature', 0.5 );
-
+        error_log("AI Bot Response: generate_ai_response called for post_id=$post_id");
         // Build complete system prompt using centralized builder
         $system_prompt = $this->system_prompt_builder->build_system_prompt( $bot_username );
 
@@ -146,13 +142,33 @@ class Generate_Bot_Response {
         // Get structured conversation messages for proper OpenAI flow
         $conversation_messages = $this->content_interaction_service->get_conversation_messages( $post_id, $post_content, $topic_id, $forum_id );
         
-        // Generate Response using ChatGPT API with proper conversation history
-        $response = $this->chatgpt_api->generate_response( $final_prompt, $system_prompt, $custom_prompt, $temperature, $conversation_messages );
-
-        if ( is_wp_error( $response ) ) {
-            return new \WP_Error('api_error', __('Sorry, I\'m having trouble generating a response right now. Please try again later.', 'ai-bot-for-bbpress'));
-        } else {
-            return $response;
+        // Build AI HTTP Client request format - library handles configuration automatically
+        // Model/temperature/provider come from library settings or our backwards compatibility filter
+        $request = array(
+            'messages' => array(
+                array('role' => 'system', 'content' => $system_prompt),
+                array('role' => 'user', 'content' => $final_prompt)
+            )
+        );
+        
+        // Add conversation history if available
+        if (!empty($conversation_messages)) {
+            // Insert conversation messages before the final user prompt
+            array_splice($request['messages'], -1, 0, $conversation_messages);
         }
+        
+        // Generate Response using AI HTTP Client (configuration handled by library + our filters)
+        error_log("AI Bot Response: Sending main response request to AI HTTP Client");
+        $response = $this->ai_http_client->send_request($request);
+        error_log("AI Bot Response: AI HTTP Client response received: " . print_r($response, true));
+
+        if (!$response['success'] || empty($response['data']['content'])) {
+            error_log("AI Bot Response: API call failed or empty content");
+            return new \WP_Error('api_error', __('Sorry, I\'m having trouble generating a response right now. Please try again later.', 'ai-bot-for-bbpress'));
+        }
+        
+        error_log("AI Bot Response: Successfully generated response");
+        return $response['data']['content'];
     }
+
 }

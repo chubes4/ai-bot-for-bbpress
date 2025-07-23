@@ -2,8 +2,8 @@
 /**
  * Plugin Name: AI Bot for bbPress
  * Plugin URI:  https://wordpress.org/plugins/ai-bot-for-bbpress/
- * Description: AI bot for bbPress forums that can be configured to reply to mentions or keywords.
- * Version:     1.0.4
+ * Description: Universal AI bot for bbPress forums with multi-provider support (OpenAI, Anthropic, Gemini, Grok, OpenRouter).
+ * Version:     1.0.5
  * Author:      Chubes
  * Author URI:  https://chubes.net
  * License:     GPLv2 or later
@@ -22,11 +22,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Define root path for convenience
 define( 'AI_BOT_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 
+// Include AI HTTP Client Library (official installation method)
+require_once AI_BOT_PLUGIN_PATH . 'lib/ai-http-client/ai-http-client.php';
+
 // Include Service Container
 require_once AI_BOT_PLUGIN_PATH . 'inc/core/class-ai-bot-service-container.php';
 
 // Include Namespaced Classes
-require_once AI_BOT_PLUGIN_PATH . 'inc/api/class-chatgpt-api.php';
 require_once AI_BOT_PLUGIN_PATH . 'inc/core/class-generate-bot-response.php';
 require_once AI_BOT_PLUGIN_PATH . 'inc/core/class-system-prompt-builder.php';
 require_once AI_BOT_PLUGIN_PATH . 'inc/core/class-bot-trigger-service.php';
@@ -45,7 +47,6 @@ require_once AI_BOT_PLUGIN_PATH . 'inc/admin/admin-central.php';
 use AiBot\Core\AiBot_Service_Container;
 use AiBot\Core\AiBot;
 use AiBot\Admin\Admin_Settings;
-use AiBot\API\ChatGPT_API;
 use AiBot\Context\Database_Agent;
 use AiBot\Context\Local_Context_Retriever;
 use AiBot\Context\Remote_Context_Retriever;
@@ -61,9 +62,10 @@ use AiBot\Core\Bot_Trigger_Service;
 $container = new AiBot_Service_Container();
 
 // Register Services
-$container->register( 'api.chatgpt', function( $c ) {
-    // Use the short class name because of the 'use' statement above
-    return new ChatGPT_API();
+
+// Register AI HTTP Client (auto-reads provider configuration from WordPress options)
+$container->register( 'api.ai_http_client', function( $c ) {
+    return new AI_HTTP_Client();
 } );
 
 $container->register( 'context.database_agent', function( $c ) {
@@ -75,7 +77,6 @@ $container->register( 'context.database_agent', function( $c ) {
 $container->register( 'context.local_retriever', function( $c ) {
     // Use the short class name because of the 'use' statement above
     return new Local_Context_Retriever(
-        $c->get( 'api.chatgpt' ),
         $c->get( 'context.database_agent' )
     );
 } );
@@ -96,7 +97,7 @@ $container->register( 'context.forum_structure_provider', function( $c ) {
 $container->register( 'core.system_prompt_builder', function( $c ) {
     return new System_Prompt_Builder(
         $c->get( 'context.forum_structure_provider' ),
-        $c->get( 'api.chatgpt' )
+        $c->get( 'api.ai_http_client' )
     );
 } );
 
@@ -112,7 +113,6 @@ $container->register( 'context.interaction_service', function( $c ) {
         $c->get( 'context.database_agent' ),
         $c->get( 'context.local_retriever' ),
         $c->get( 'context.remote_retriever' ),
-        $c->get( 'api.chatgpt' ),
         $c->get( 'core.system_prompt_builder' )
     );
 } );
@@ -122,7 +122,7 @@ $container->register( 'context.interaction_service', function( $c ) {
 $container->register( 'core.generate_bot_response', function( $c ) {
     // Use the short class name because of the 'use' statement above
     return new Generate_Bot_Response(
-        $c->get( 'api.chatgpt' ),
+        $c->get( 'api.ai_http_client' ), // Changed from api.chatgpt to ai_http_client
         $c->get( 'context.interaction_service' ),
         $c->get( 'core.system_prompt_builder' ),
         $c // Pass the container itself
@@ -150,5 +150,38 @@ if (method_exists($ai_bot_instance, 'init')) {
     // error_log('AI Bot for bbPress Error: init() method not found on main bot class.');
 }
 
+
+// --- Elegant Backwards Compatibility ---
+
+// Hook WordPress core option filters to provide seamless fallback to old plugin settings
+// This ensures existing users' settings work without any migration or modification
+add_filter('option_ai_http_client_providers', function($value) {
+    // If library settings don't exist, map old plugin settings at runtime
+    if (empty($value)) {
+        $old_api_key = get_option('ai_bot_api_key');
+        if (!empty($old_api_key)) {
+            return array(
+                'openai' => array(
+                    'api_key' => $old_api_key,
+                    'model' => 'gpt-4.1-mini',
+                    'temperature' => get_option('ai_bot_temperature', 0.5)
+                )
+            );
+        }
+    }
+    return $value; // Return original if library settings exist or no fallback available
+});
+
+// Also handle the selected provider option
+add_filter('option_ai_http_client_selected_provider', function($value) {
+    // If no library provider selected, but we have old API key, default to openai
+    if (empty($value)) {
+        $old_api_key = get_option('ai_bot_api_key');
+        if (!empty($old_api_key)) {
+            return 'openai';
+        }
+    }
+    return $value;
+});
 
 // --- End Service Container Setup ---

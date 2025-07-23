@@ -2,7 +2,6 @@
 
 namespace AiBot\Context;
 
-use AiBot\API\ChatGPT_API;
 use AiBot\Context\Database_Agent;
 use AiBot\Context\Local_Context_Retriever; // Add use statement for Local_Context_Retriever
 use AiBot\Context\Remote_Context_Retriever; // Add use statement for Remote_Context_Retriever
@@ -14,13 +13,6 @@ use AiBot\Core\System_Prompt_Builder;
  * Handles interactions between OpenAI and the database for context retrieval.
  */
 class Content_Interaction_Service {
-
-    /**
-     * ChatGPT API instance
-     *
-     * @var ChatGPT_API
-     */
-    private $chatgpt_api;
 
     /**
      * Database Agent instance
@@ -56,20 +48,17 @@ class Content_Interaction_Service {
      * @param Database_Agent $database_agent Instance of the database agent.
      * @param Local_Context_Retriever $local_context_retriever Instance of the local context retriever.
      * @param Remote_Context_Retriever $remote_context_retriever Instance of the remote context retriever.
-     * @param ChatGPT_API $chatgpt_api Instance of the ChatGPT API.
      * @param System_Prompt_Builder $system_prompt_builder Instance of the system prompt builder.
      */
     public function __construct(
         Database_Agent $database_agent,
         Local_Context_Retriever $local_context_retriever,
         Remote_Context_Retriever $remote_context_retriever,
-        ChatGPT_API $chatgpt_api,
         System_Prompt_Builder $system_prompt_builder
     ) {
         $this->database_agent           = $database_agent;
         $this->local_context_retriever  = $local_context_retriever; // Assign the injected instance
         $this->remote_context_retriever = $remote_context_retriever;
-        $this->chatgpt_api              = $chatgpt_api; // Assign the injected instance
         $this->system_prompt_builder    = $system_prompt_builder;
     }
 

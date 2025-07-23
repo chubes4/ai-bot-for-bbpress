@@ -3,7 +3,6 @@
 namespace AiBot\Core;
 
 use AiBot\Context\Forum_Structure_Provider;
-use AiBot\API\ChatGPT_API;
 
 /**
  * System Prompt Builder Class
@@ -18,22 +17,22 @@ class System_Prompt_Builder {
     private $forum_structure_provider;
 
     /**
-     * @var ChatGPT_API
+     * @var \AI_HTTP_Client
      */
-    private $chatgpt_api;
+    private $ai_http_client;
 
     /**
      * Constructor
      *
      * @param Forum_Structure_Provider $forum_structure_provider The forum structure provider instance.
-     * @param ChatGPT_API $chatgpt_api The ChatGPT API instance for keyword extraction.
+     * @param \AI_HTTP_Client $ai_http_client The AI HTTP Client instance for keyword extraction.
      */
     public function __construct(
         Forum_Structure_Provider $forum_structure_provider,
-        ChatGPT_API $chatgpt_api
+        \AI_HTTP_Client $ai_http_client
     ) {
         $this->forum_structure_provider = $forum_structure_provider;
-        $this->chatgpt_api = $chatgpt_api;
+        $this->ai_http_client = $ai_http_client;
     }
 
     /**
@@ -122,16 +121,30 @@ class System_Prompt_Builder {
      * @return string Comma-separated keywords or empty string on failure
      */
     public function extract_keywords( $post_content, $bot_username ) {
+        error_log("AI Bot Keywords: extract_keywords called");
+        error_log("AI Bot Keywords: Stack trace: " . wp_debug_backtrace_summary());
         $keyword_extraction_prompt = $this->build_keyword_extraction_prompt( $post_content, $bot_username );
-        $keywords_response = $this->chatgpt_api->generate_response( $keyword_extraction_prompt, '', '', 0.2 );
+        
+        // Build AI HTTP Client request for keyword extraction
+        $request = array(
+            'messages' => array(
+                array('role' => 'user', 'content' => $keyword_extraction_prompt)
+            )
+        );
+        
+        error_log("AI Bot Keywords: Sending request to AI HTTP Client");
+        $response = $this->ai_http_client->send_request($request);
+        error_log("AI Bot Keywords: AI HTTP Client response: " . print_r($response, true));
 
-        if ( ! is_wp_error( $keywords_response ) && ! empty( $keywords_response ) ) {
-            $keywords_comma_separated = trim( $keywords_response );
+        if ( $response['success'] && !empty($response['data']['content']) ) {
+            $keywords_comma_separated = trim( $response['data']['content'] );
+            error_log("AI Bot Keywords: Extracted keywords: '$keywords_comma_separated'");
             if ( ! empty( $keywords_comma_separated ) ) {
                 return $keywords_comma_separated;
             }
         }
 
+        error_log("AI Bot Keywords: No valid response or empty keywords");
         return '';
     }
 

@@ -47,7 +47,7 @@ class AI_HTTP_Unified_Request_Normalizer {
                 return $this->normalize_for_openrouter($standard_request);
             
             default:
-                throw new Exception("Unsupported provider: {$provider_name}");
+                throw new Exception("Unsupported provider: " . esc_html($provider_name));
         }
     }
 
@@ -72,7 +72,7 @@ class AI_HTTP_Unified_Request_Normalizer {
         }
         
         // No model available - throw exception
-        throw new Exception('No model specified in request and no model configured for provider');
+        throw new Exception(esc_html('No model specified in request and no model configured for provider'));
     }
 
     /**
@@ -83,15 +83,15 @@ class AI_HTTP_Unified_Request_Normalizer {
      */
     private function validate_standard_request($request) {
         if (!is_array($request)) {
-            throw new Exception('Request must be an array');
+            throw new Exception(esc_html('Request must be an array'));
         }
 
         if (!isset($request['messages']) || !is_array($request['messages'])) {
-            throw new Exception('Request must include messages array');
+            throw new Exception(esc_html('Request must include messages array'));
         }
 
         if (empty($request['messages'])) {
-            throw new Exception('Messages array cannot be empty');
+            throw new Exception(esc_html('Messages array cannot be empty'));
         }
     }
 

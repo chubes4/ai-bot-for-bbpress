@@ -1,21 +1,35 @@
 === AI Bot for bbPress ===
 Contributors: chubes
-Tags: bbpress, ai, bot, forum, chatgpt
+Tags: bbpress, ai, bot, forum, chatgpt, anthropic, claude, gemini, grok, openrouter, multi-provider
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: ai-bot-for-bbpress
 
-Integrates a configurable AI bot into bbPress forums, responding to mentions or keywords.
+Universal AI bot for bbPress forums with multi-provider support - choose from OpenAI, Anthropic, Gemini, Grok, or OpenRouter.
 
 == Description ==
 
+**The first and only bbPress AI bot with true multi-provider support!** Choose from 5 major AI providers and switch between them seamlessly without any code changes.
+
 AI Bot for bbPress integrates seamlessly with your bbPress forums, allowing a configurable AI bot user to participate in discussions. The bot can be triggered by direct mentions (@YourBotUsername) or specific keywords within forum posts, leveraging context from the forum and optionally a remote WordPress site.
 
-Currently uses OpenAI's ChatGPT API. Future versions will migrate to our [AI HTTP Client library](https://github.com/chubes4/ai-http-client) to provide multi-provider support (OpenAI, Anthropic, Gemini, Grok, OpenRouter) with a unified interface.
+**🚀 Multi-Provider AI Support:**
+* **OpenAI** - Access to all available OpenAI models
+* **Anthropic** - Full Claude model family support
+* **Google Gemini** - Complete Gemini model lineup
+* **Grok (X.AI)** - All Grok models with advanced capabilities  
+* **OpenRouter** - Access to 100+ models from multiple providers
+
+**✨ Key Features:**
+* **Professional Provider Management** - Intuitive admin interface for easy switching
+* **Dynamic Model Selection** - Automatically fetches available models from any provider
+* **Seamless Migration** - Existing OpenAI configurations work without changes
+* **Cost Optimization** - Choose providers based on your budget and needs
+* **Future-Proof** - Built on our advanced [AI HTTP Client library](https://github.com/chubes4/ai-http-client)
 
 **Links:**
 * [Plugin Homepage](https://chubes.net) - Visit the developer's website
@@ -32,7 +46,7 @@ Currently uses OpenAI's ChatGPT API. Future versions will migrate to our [AI HTT
 
 After activation, navigate to Settings > Forum AI Bot in your WordPress admin area to configure the following options:
 
-*   **OpenAI API Key:** Your secret API key from OpenAI.
+*   **AI Provider Configuration:** Choose your preferred AI provider (OpenAI, Anthropic, Gemini, Grok, or OpenRouter) and enter the corresponding API key. The interface automatically adapts to show relevant settings for your selected provider.
 *   **Bot User ID:** The WordPress user ID of the account the bot will use to post replies.
 *   **System Prompt:** Instructions defining the bot's personality, role, and general behavior (e.g., "You are a helpful assistant for the Example Community forum.").
 *   **Custom Prompt:** Additional instructions appended to every API request, useful for guiding specific response formats or context usage.
@@ -75,11 +89,11 @@ The endpoint itself is public by default, typical of WordPress REST API endpoint
 
 == External Services ==
 
-This plugin connects to the OpenAI API to generate responses for the AI bot. This is essential for the plugin's core functionality of providing AI-driven replies in bbPress forums.
+This plugin connects to your selected AI provider's API to generate responses for the AI bot. This is essential for the plugin's core functionality of providing AI-driven replies in bbPress forums.
 
-*   **Service:** OpenAI API (specifically the Chat Completions endpoint).
+*   **Supported Services:** OpenAI API, Anthropic API, Google Gemini API, Grok (X.AI) API, or OpenRouter API - depending on your configuration.
 *   **Purpose:** To generate intelligent and contextually relevant responses based on forum discussions and configured prompts.
-*   **Data Sent:** When the bot is triggered (by a mention or keyword), the following types of data are sent to the OpenAI API:
+*   **Data Sent:** When the bot is triggered (by a mention or keyword), the following types of data are sent to your selected AI provider's API:
     *   The content of the post that triggered the bot.
     *   Relevant conversation history from the current topic (including post content and author usernames/slugs).
     *   Contextual information retrieved from the local WordPress database (titles, snippets, and URLs of relevant posts/pages based on keyword matching).
@@ -88,12 +102,11 @@ This plugin connects to the OpenAI API to generate responses for the AI bot. Thi
     *   The structure of your bbPress forums (forum names, topic names, and their hierarchy).
     *   The current date and time.
 *   **When Data is Sent:** Data is sent only when the bot is triggered to generate a response. This occurs after a user posts a new reply or topic that meets the trigger conditions (mentioning the bot or containing a specified keyword).
-*   **OpenAI API Terms of Service:** [https://openai.com/policies/terms-of-service](https://openai.com/policies/terms-of-service)
-*   **OpenAI API Privacy Policy:** [https://openai.com/policies/privacy-policy](https://openai.com/policies/privacy-policy)
+*   **Privacy Policies:** Please review the privacy policy and terms of service for your selected AI provider to understand how they handle the data sent to their API.
 
-It is important to have an active OpenAI API key with sufficient credits for the bot to function. Please review OpenAI's policies to understand how they handle the data sent to their API.
+It is important to have an active API key with sufficient credits/quota for your selected AI provider for the bot to function. Each provider has different pricing models and terms.
 
-If the "Remote REST Endpoint URL" is configured, the plugin will also send search queries (derived from the conversation) to that endpoint to fetch additional context. This endpoint is typically on another WordPress site you control and that runs the companion "BBP Bot Helper" plugin. No user-specific data is sent to this remote endpoint beyond the search terms. The data received from this endpoint is then included in the information sent to the OpenAI API as described above.
+If the "Remote REST Endpoint URL" is configured, the plugin will also send search queries (derived from the conversation) to that endpoint to fetch additional context. This endpoint is typically on another WordPress site you control and that runs the companion "BBP Bot Helper" plugin. No user-specific data is sent to this remote endpoint beyond the search terms. The data received from this endpoint is then included in the information sent to your selected AI provider's API as described above.
 
 == Screenshots ==
 
@@ -102,6 +115,19 @@ If the "Remote REST Endpoint URL" is configured, the plugin will also send searc
 3.  (Add more descriptions as needed)
 
 == Changelog ==
+
+= 1.0.5 =
+* 🚀 REVOLUTIONARY: Multi-Provider AI Support - Choose from 5 AI providers!
+* NEW: Support for OpenAI, Anthropic (Claude), Google Gemini, Grok (X.AI), and OpenRouter
+* NEW: Professional provider management interface with seamless switching
+* NEW: Dynamic model selection - automatically fetch available models from any provider
+* NEW: Unified admin interface for all providers with core components
+* ENHANCEMENT: Backward compatibility - existing OpenAI configurations work seamlessly
+* ENHANCEMENT: Provider-agnostic architecture - switch providers without code changes  
+* ENHANCEMENT: Real-time model fetching with proper error handling and UX feedback
+* ARCHITECTURE: Complete integration of AI HTTP Client library (7,400+ lines of new code)
+* ARCHITECTURE: Unified normalizers for consistent cross-provider functionality
+* UPGRADE: From single-provider to universal AI bot platform
 
 = 1.0.4 =
 * Fix: Bot replies now properly trigger WordPress hooks (bbp_new_reply) for better integration

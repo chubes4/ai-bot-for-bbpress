@@ -12,6 +12,11 @@ use AiBot\Context\Database_Agent;
 class AiBot {
 
     /**
+     * @var bool
+     */
+    private $hooks_registered = false;
+
+    /**
      * @var Bot_Trigger_Service
      */
     private $bot_trigger_service;
@@ -55,20 +60,31 @@ class AiBot {
      * Initialize hooks and filters
      */
     public function init() {
-        // Add action hooks
-        add_action( 'plugins_loaded', array( $this, 'register_hooks' ) );
+        // Register hooks immediately - we're already in plugins_loaded
+        $this->register_hooks();
     }
 
     /**
      * Register action and filter hooks
      */
     public function register_hooks() {
+        if ($this->hooks_registered) {
+            error_log('AI Bot: register_hooks called but hooks already registered - skipping');
+            return;
+        }
+        
+        error_log('AI Bot: register_hooks called - registering bbPress hooks');
+        
         // Register bbPress hooks for bot triggers
         add_action( 'bbp_new_reply', array( $this, 'handle_bot_trigger' ), 9, 5 );
         add_action( 'bbp_new_topic', array( $this, 'handle_bot_trigger' ), 9, 4 );
         
-        // Add the cron action hook
+        $this->hooks_registered = true;
+        error_log('AI Bot: bbPress hooks registered - bbp_new_reply and bbp_new_topic');
+        
+        // ALWAYS register the cron action hook (needed for different WordPress processes)
         add_action( 'ai_bot_generate_bot_response_event', array( $this->generate_bot_response, 'generate_and_post_ai_response_cron' ), 10, 5 );
+        error_log('AI Bot: Cron action hook registered for ai_bot_generate_bot_response_event');
 
         // Initialize admin settings (assuming Admin_Central is procedural)
         // Ensure the functions in admin-central.php are loaded via require_once in the main plugin file
@@ -85,10 +101,13 @@ class AiBot {
      * Handle mention or keyword trigger
      */
     public function handle_bot_trigger( $post_id, $topic_id, $forum_id, $anonymous_data, $reply_author = 0 ) {
+        error_log("AI Bot: handle_bot_trigger called - post_id=$post_id, topic_id=$topic_id, forum_id=$forum_id, reply_author=$reply_author");
         $post_content = ($reply_author == 0) ? bbp_get_topic_content( $post_id ) : bbp_get_reply_content( $post_id );
+        error_log("AI Bot: post_content='$post_content'");
 
         // Check if the interaction should be triggered using the injected service
         if ( $this->bot_trigger_service->should_trigger_interaction( $post_id, $post_content, $topic_id, $forum_id ) ) {
+            error_log("AI Bot: Trigger conditions met - scheduling cron event");
 
             // Schedule cron event to generate and post AI response
             $scheduled = wp_schedule_single_event(
@@ -96,6 +115,9 @@ class AiBot {
                 'ai_bot_generate_bot_response_event',
                 array( $post_id, $topic_id, $forum_id, $anonymous_data, $reply_author )
             );
+            error_log("AI Bot: Cron event scheduled - result=" . ($scheduled ? 'SUCCESS' : 'FAILED'));
+        } else {
+            error_log("AI Bot: Trigger conditions NOT met - no action taken");
         }
     }
 

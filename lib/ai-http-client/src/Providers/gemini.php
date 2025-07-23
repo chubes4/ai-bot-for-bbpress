@@ -60,7 +60,7 @@ class AI_HTTP_Gemini_Provider {
         ));
 
         if (is_wp_error($response)) {
-            throw new Exception('Gemini API request failed: ' . $response->get_error_message());
+            throw new Exception('Gemini API request failed: ' . esc_html($response->get_error_message()));
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
@@ -72,7 +72,7 @@ class AI_HTTP_Gemini_Provider {
             if (isset($decoded_response['error']['message'])) {
                 $error_message .= ': ' . $decoded_response['error']['message'];
             }
-            throw new Exception($error_message);
+            throw new Exception(esc_html($error_message));
         }
 
         if (json_last_error() !== JSON_ERROR_NONE) {
@@ -115,7 +115,7 @@ class AI_HTTP_Gemini_Provider {
                 if ($callback && is_callable($callback)) {
                     call_user_func($callback, $data);
                 } else {
-                    echo $data;
+                    echo esc_html($data);
                     flush();
                 }
                 return strlen($data);
@@ -130,11 +130,11 @@ class AI_HTTP_Gemini_Provider {
         curl_close($ch);
 
         if ($result === false) {
-            throw new Exception('Gemini streaming request failed: ' . $error);
+            throw new Exception('Gemini streaming request failed: ' . esc_html($error));
         }
 
         if ($http_code !== 200) {
-            throw new Exception('Gemini streaming request failed with HTTP ' . $http_code);
+            throw new Exception('Gemini streaming request failed with HTTP ' . esc_html($http_code));
         }
 
         return '';
@@ -160,7 +160,7 @@ class AI_HTTP_Gemini_Provider {
         ));
 
         if (is_wp_error($response)) {
-            throw new Exception('Gemini models request failed: ' . $response->get_error_message());
+            throw new Exception('Gemini models request failed: ' . esc_html($response->get_error_message()));
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
@@ -168,7 +168,7 @@ class AI_HTTP_Gemini_Provider {
         $decoded_response = json_decode($body, true);
 
         if ($status_code !== 200) {
-            throw new Exception('Gemini models request failed with HTTP ' . $status_code);
+            throw new Exception('Gemini models request failed with HTTP ' . esc_html($status_code));
         }
 
         if (json_last_error() !== JSON_ERROR_NONE) {
