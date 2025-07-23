@@ -165,6 +165,7 @@ function ai_bot_context_settings_section_callback() {
 function ai_bot_provider_config_callback() {
     // Render AI HTTP Client core components only: provider selector, API key input, model selector
     echo wp_kses_post( AI_HTTP_ProviderManager_Component::render([
+        'plugin_context' => 'ai-bot-for-bbpress', // Required for multi-plugin architecture
         'title' => false, // No title since we already have one in the field
         'components' => [
             'core' => ['provider_selector', 'api_key_input', 'model_selector'],
