@@ -3,7 +3,7 @@ Contributors: chubes
 Tags: bbpress, ai, bot, forum, chatgpt
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.0.4.2
+Stable tag: 1.0.4.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -102,10 +102,6 @@ If the "Remote REST Endpoint URL" is configured, the plugin will also send searc
 3.  (Add more descriptions as needed)
 
 == Changelog ==
-
-= 1.0.4.2 =
-* CRITICAL FIX: Set explicit 60-second timeout for OpenAI API calls to prevent WordPress 5-second default timeout
-* Fix: Resolves bot failures in longer conversations due to API timeout
 
 = 1.0.4.1 =
 * HOTFIX: Removed API timeout constraints that caused bot failures in longer conversations

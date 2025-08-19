@@ -66,8 +66,7 @@ class ChatGPT_API {
                     'temperature' => floatval( $temperature ), // Ensure temperature is a float
                 )
             ),
-            'method'  => 'POST',
-            'timeout' => 60 // Set 60-second timeout for OpenAI API
+            'method'  => 'POST'
         );
 
         // Log the request and response only on error or for debugging
