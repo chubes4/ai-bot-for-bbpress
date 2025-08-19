@@ -17,22 +17,14 @@ class System_Prompt_Builder {
     private $forum_structure_provider;
 
     /**
-     * @var \AI_HTTP_Client
-     */
-    private $ai_http_client;
-
-    /**
      * Constructor
      *
      * @param Forum_Structure_Provider $forum_structure_provider The forum structure provider instance.
-     * @param \AI_HTTP_Client $ai_http_client The AI HTTP Client instance for keyword extraction.
      */
     public function __construct(
-        Forum_Structure_Provider $forum_structure_provider,
-        \AI_HTTP_Client $ai_http_client
+        Forum_Structure_Provider $forum_structure_provider
     ) {
         $this->forum_structure_provider = $forum_structure_provider;
-        $this->ai_http_client = $ai_http_client;
     }
 
     /**
@@ -83,70 +75,6 @@ class System_Prompt_Builder {
         );
     }
 
-    /**
-     * Build keyword extraction prompt for context search
-     *
-     * @param string $post_content The post content to extract keywords from
-     * @param string $bot_username The bot's username to exclude from keywords
-     * @return string Formatted keyword extraction prompt
-     */
-    public function build_keyword_extraction_prompt( $post_content, $bot_username ) {
-        // Prepare list of terms to exclude from keywords
-        $excluded_terms = ['forum', 'topic', 'post', 'reply', 'thread', 'discussion', 'message', 'conversation'];
-        if ( $bot_username !== 'Bot' ) { // Make sure we have a specific bot username
-             $excluded_terms[] = '@' . $bot_username; // Add the @mention format
-             $excluded_terms[] = $bot_username; // Add the username itself
-        }
-        $exclude_list_string = implode(', ', $excluded_terms);
-
-        return sprintf(
-            "Analyze the following forum post content. Extract the most relevant keywords or phrases for searching a knowledge base to answer the user's core query. Provide the results as a single comma-separated list.\\n\\n".
-            "**Guidelines:**\\n".
-            "1. Prioritize specific, multi-word phrases (e.g., 'Grateful Dead Ripple', 'artist story sharing') over single generic words (e.g., 'music', 'artists').\\n".
-            "2. If the user asks about a specific person, band, song, place, event name, or other named entity, ensure that entity's name is the core part of your primary extracted phrase.\\n".
-            "3. Order the results from most central to least central to the user's query.\\n".
-            "4. Extract *up to* 3 distinct phrases/keywords. If the user's post is short or very specific, providing only 1 or 2 highly relevant phrases/keywords is preferable to adding less relevant ones.\\n".
-            "5. **CRITICAL:** Avoid appending generic terms like 'discussion', 'event', 'forecast', 'update', 'info', 'details', 'question', 'help', or the forum terms (%s) to the core subject. For example, if the post is about 'High Water 2025', extract 'High Water 2025', NOT 'High Water 2025 discussion' or 'High Water 2025 event'. Only include such terms if they are part of a specific official name or title explicitly mentioned in the post content.\\n\\n".
-            "Post Content:\\n%s",
-            $exclude_list_string,
-            wp_strip_all_tags( $post_content )
-        );
-    }
-
-    /**
-     * Extract keywords using ChatGPT API
-     *
-     * @param string $post_content The post content to extract keywords from
-     * @param string $bot_username The bot's username to exclude from keywords
-     * @return string Comma-separated keywords or empty string on failure
-     */
-    public function extract_keywords( $post_content, $bot_username ) {
-        error_log("AI Bot Keywords: extract_keywords called");
-        error_log("AI Bot Keywords: Stack trace: " . wp_debug_backtrace_summary());
-        $keyword_extraction_prompt = $this->build_keyword_extraction_prompt( $post_content, $bot_username );
-        
-        // Build AI HTTP Client request for keyword extraction
-        $request = array(
-            'messages' => array(
-                array('role' => 'user', 'content' => $keyword_extraction_prompt)
-            )
-        );
-        
-        error_log("AI Bot Keywords: Sending request to AI HTTP Client");
-        $response = $this->ai_http_client->send_request($request);
-        error_log("AI Bot Keywords: AI HTTP Client response: " . print_r($response, true));
-
-        if ( $response['success'] && !empty($response['data']['content']) ) {
-            $keywords_comma_separated = trim( $response['data']['content'] );
-            error_log("AI Bot Keywords: Extracted keywords: '$keywords_comma_separated'");
-            if ( ! empty( $keywords_comma_separated ) ) {
-                return $keywords_comma_separated;
-            }
-        }
-
-        error_log("AI Bot Keywords: No valid response or empty keywords");
-        return '';
-    }
 
     /**
      * Build date/time instruction block

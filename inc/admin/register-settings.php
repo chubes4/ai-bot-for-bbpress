@@ -19,7 +19,10 @@ function ai_bot_register_all_settings() {
     $page_slug      = 'ai-bot-for-bbpress-settings';
 
     // Register settings (Each option needs to be registered)
-    // Note: AI HTTP Client handles its own settings (ai_http_client_providers, ai_http_client_selected_provider)
+    // Note: AI HTTP Client handles shared API keys (ai_http_shared_api_keys)
+    // Plugin stores its own provider/model selections
+    register_setting( $settings_group, 'ai_bot_selected_provider', 'sanitize_text_field' );
+    register_setting( $settings_group, 'ai_bot_selected_model', 'sanitize_text_field' );
     register_setting( $settings_group, 'ai_bot_user_id', 'absint' );
     register_setting( $settings_group, 'ai_bot_system_prompt', 'wp_kses_post' );
     register_setting( $settings_group, 'ai_bot_custom_prompt', 'wp_kses_post' );
@@ -163,16 +166,14 @@ function ai_bot_context_settings_section_callback() {
 
 // Field Callbacks
 function ai_bot_provider_config_callback() {
-    // Render AI HTTP Client core components only: provider selector, API key input, model selector
-    echo AI_HTTP_ProviderManager_Component::render([
-        'plugin_context' => 'ai-bot-for-bbpress', // Required for multi-plugin architecture
-        'title' => false, // No title since we already have one in the field
-        'components' => [
-            'core' => ['provider_selector', 'api_key_input', 'model_selector'],
-            'extended' => [] // No extended components - we use our own temperature
-        ],
-        'show_test_connection' => true,
-        'wrapper_class' => 'ai-http-provider-manager ai-bot-inline-config'
+    // Get current plugin selections to pre-populate the component
+    $selected_provider = get_option('ai_bot_selected_provider', 'openai');
+    $selected_model = get_option('ai_bot_selected_model', '');
+    
+    // Render AI HTTP Client components using new filter-based architecture
+    echo apply_filters('ai_render_component', '', [
+        'selected_provider' => $selected_provider,
+        'selected_model' => $selected_model
     ]);
     echo '<p class="description">' . esc_html__( 'Select your AI provider, enter your API key, and choose a model.', 'ai-bot-for-bbpress' ) . '</p>';
 }
@@ -306,24 +307,6 @@ function ai_bot_forum_restriction_callback() {
     echo '</div>';
     echo '<p class="description">' . esc_html__( 'Choose "Selected Forums Only" to restrict the bot to specific forums. This helps prevent spam and keeps the bot focused on professional sections.', 'ai-bot-for-bbpress' ) . '</p>';
     echo '</div>';
-    
-    // JavaScript for enabling/disabling checkboxes
-    echo '<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const radioButtons = document.querySelectorAll(\'input[name="ai_bot_forum_restriction"]\');
-        const checkboxes = document.querySelectorAll(\'.ai-bot-forum-checkbox\');
-        const selectionDiv = document.getElementById(\'ai-bot-forum-selection\');
-        
-        function updateCheckboxState() {
-            const isSelected = document.querySelector(\'input[name="ai_bot_forum_restriction"]:checked\').value === "selected";
-            checkboxes.forEach(checkbox => checkbox.disabled = !isSelected);
-            selectionDiv.style.opacity = isSelected ? "1" : "0.5";
-        }
-        
-        radioButtons.forEach(radio => radio.addEventListener("change", updateCheckboxState));
-        updateCheckboxState(); // Initial state
-    });
-    </script>';
 }
 
 // Sanitization callback for temperature

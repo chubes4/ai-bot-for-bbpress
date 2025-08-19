@@ -11,10 +11,6 @@ use AiBot\Context\Database_Agent;
  */
 class AiBot {
 
-    /**
-     * @var bool
-     */
-    private $hooks_registered = false;
 
     /**
      * @var Bot_Trigger_Service
@@ -68,32 +64,10 @@ class AiBot {
      * Register action and filter hooks
      */
     public function register_hooks() {
-        if ($this->hooks_registered) {
-            error_log('AI Bot: register_hooks called but hooks already registered - skipping');
-            return;
-        }
-        
-        error_log('AI Bot: register_hooks called - registering bbPress hooks');
-        
-        // Register bbPress hooks for bot triggers
         add_action( 'bbp_new_reply', array( $this, 'handle_bot_trigger' ), 9, 5 );
         add_action( 'bbp_new_topic', array( $this, 'handle_bot_trigger' ), 9, 4 );
-        
-        $this->hooks_registered = true;
-        error_log('AI Bot: bbPress hooks registered - bbp_new_reply and bbp_new_topic');
-        
-        // ALWAYS register the cron action hook (needed for different WordPress processes)
         add_action( 'ai_bot_generate_bot_response_event', array( $this->generate_bot_response, 'generate_and_post_ai_response_cron' ), 10, 5 );
-        error_log('AI Bot: Cron action hook registered for ai_bot_generate_bot_response_event');
 
-        // Initialize admin settings (assuming Admin_Central is procedural)
-        // Ensure the functions in admin-central.php are loaded via require_once in the main plugin file
-        if ( function_exists('ai_bot_add_options_page') ) {
-            // Hooks for admin menu and settings are already added in admin-central.php
-            // No need to add them again here.
-        } else {
-            // error_log('AI Bot Error: Admin functions not loaded.');
-        }
 
     }
 
@@ -101,23 +75,14 @@ class AiBot {
      * Handle mention or keyword trigger
      */
     public function handle_bot_trigger( $post_id, $topic_id, $forum_id, $anonymous_data, $reply_author = 0 ) {
-        error_log("AI Bot: handle_bot_trigger called - post_id=$post_id, topic_id=$topic_id, forum_id=$forum_id, reply_author=$reply_author");
         $post_content = ($reply_author == 0) ? bbp_get_topic_content( $post_id ) : bbp_get_reply_content( $post_id );
-        error_log("AI Bot: post_content='$post_content'");
 
-        // Check if the interaction should be triggered using the injected service
         if ( $this->bot_trigger_service->should_trigger_interaction( $post_id, $post_content, $topic_id, $forum_id ) ) {
-            error_log("AI Bot: Trigger conditions met - scheduling cron event");
-
-            // Schedule cron event to generate and post AI response
-            $scheduled = wp_schedule_single_event(
+            wp_schedule_single_event(
                 time(),
                 'ai_bot_generate_bot_response_event',
                 array( $post_id, $topic_id, $forum_id, $anonymous_data, $reply_author )
             );
-            error_log("AI Bot: Cron event scheduled - result=" . ($scheduled ? 'SUCCESS' : 'FAILED'));
-        } else {
-            error_log("AI Bot: Trigger conditions NOT met - no action taken");
         }
     }
 
@@ -129,39 +94,28 @@ class AiBot {
      * @return int|WP_Error The new reply ID or WP_Error on failure.
      */
     public function post_bot_reply( $topic_id, $content ) {
-        // Get the Bot User ID from options
         $bot_user_id = get_option( 'ai_bot_user_id' );
         $forum_id = bbp_get_topic_forum_id( $topic_id );
 
         if ( ! $bot_user_id ) {
-            // error_log( 'AI Bot Error: Cannot post reply, Bot User ID is not set.' );
             return new \WP_Error( 'config_error', __( 'Bot User ID not configured.', 'ai-bot-for-bbpress' ) );
         }
 
-        // Prepare the reply data
         $reply_data = array(
             'post_parent' => $topic_id,
             'post_author' => $bot_user_id,
             'post_content' => $content,
-            'post_title' => 'Re: ' . bbp_get_topic_title( $topic_id ), // Generate a basic title
-            // Other necessary meta fields can be added here if needed
+            'post_title' => 'Re: ' . bbp_get_topic_title( $topic_id ),
         );
 
-        // Insert the reply
         $reply_id = bbp_insert_reply( $reply_data, array('forum_id' => $forum_id) );
 
         if ( is_wp_error( $reply_id ) ) {
-            // error_log( 'AI Bot Error: Failed to insert bbPress reply for topic ' . $topic_id . '. Error: ' . $reply_id->get_error_message() );
-            return $reply_id; // Return the WP_Error object
-        } else {
-            // error_log( 'AI Bot Info: Successfully posted reply ID ' . $reply_id . ' to topic ID ' . $topic_id );
-            
-            // IMPORTANT: Fire the bbp_new_reply hook to ensure compatibility with notification plugins,
-            // points systems, activity feeds, and other bbPress integrations that expect this hook
-            do_action( 'bbp_new_reply', $reply_id, $topic_id, $forum_id, array(), $bot_user_id );
-            
             return $reply_id;
         }
+
+        do_action( 'bbp_new_reply', $reply_id, $topic_id, $forum_id, array(), $bot_user_id );
+        return $reply_id;
     }
 
 }

@@ -37,6 +37,23 @@ function ai_bot_register_settings() {
 add_action( 'admin_init', 'ai_bot_register_settings' );
 
 /**
+ * Enqueue admin scripts
+ */
+function ai_bot_enqueue_admin_scripts($hook) {
+    if ($hook !== 'settings_page_ai-bot-for-bbpress-settings') {
+        return;
+    }
+    wp_enqueue_script(
+        'ai-bot-admin-settings',
+        plugin_dir_url(dirname(__DIR__)) . 'assets/js/admin-settings.js',
+        array(),
+        '1.0.0',
+        true
+    );
+}
+add_action('admin_enqueue_scripts', 'ai_bot_enqueue_admin_scripts');
+
+/**
  * Render the options page HTML
  */
 function ai_bot_options_page_html() {
